@@ -35,23 +35,43 @@ void	decode_ethernet_packet(const u_char *header_start)
 	printf("\tType: %hu ]\n", ethernet_header->ether_type);
 }
 
-void	decode_ip_packet(const u_char *header_start)
+u_int	decode_ip_packet(const u_char *header_start)
 {
 	const struct ip_hdr		*ip_header;
 
-	ip_header = (const struct ip_hdr*)header_start;
+	ip_header = (const struct ip_hdr*) header_start;
 	printf("\t((  Layer 3 ::: IP Header  ))\n");
 
 	printf("\t( Source: %s\t", inet_ntoa(*(struct in_addr*)&(ip_header->ip_src_addr)));
 	printf("Dest: %s )\n", inet_ntoa(*(struct in_addr*)&(ip_header->ip_dst_addr)));
 	printf("\t( Type: %u\t", (u_int) ip_header->ip_type);
 	printf("ID: %hu\tLength: %hu )\n", ntohs(ip_header->ip_id), ntohs(ip_header->ip_len));
+	return ((u_int) ip_header->ip_type);
+}
+
+u_int	decode_icmp_packet(const u_char *header_start)
+{
+	u_int					header_size;
+	const struct icmp_hdr	*icmp_header;
+
+	icmp_header = (const struct icmp_hdr *) header_start;
+	printf("\t\t{{ Layer 3 ::: ICMP Header }}\n");
+	printf("\t\t{ ICMP Type: %u\t", icmp_header->icmp_type);
+	printf("ICMP Code: %u\t\n\n", icmp_header->icmp_code);
 }
 
 u_int	decode_tcp_packet(const u_char *header_start)
 {
 	(void)header_start;
+	printf("Detected TCP protocol\n\n");
 }
+
+u_int	decode_udp_packet(const u_char *header_start)
+{
+	(void)header_start;
+	printf("Detected UDP protocol\n\n");
+}
+
 
 void caught_packet(u_char *user_args, const struct pcap_pkthdr *cap_header,
 				const u_char *packet)
@@ -59,10 +79,29 @@ void caught_packet(u_char *user_args, const struct pcap_pkthdr *cap_header,
 	(void) user_args;
 //	int		tcp_header_length, total_header_size, pkt_data_len;
 //	u_char	*pkt_data;
+	u_int	ip_type;
 
 	printf("=== Got a %d byte packet ===\n", cap_header->len);
 	decode_ethernet_packet(packet);
-	decode_ip_packet(packet + ETHER_HDR_LEN);
+	ip_type = decode_ip_packet(packet + ETHER_HDR_LEN);
+	switch (ip_type) {
+		case ICMP_CODE :
+			decode_icmp_packet(packet + ETHER_HDR_LEN + sizeof (struct ip_hdr));
+			break ;
+
+		case TCP_CODE :
+			decode_tcp_packet(packet + ETHER_HDR_LEN + sizeof (struct ip_hdr));
+			break ;
+
+		case UDP_CODE :
+			decode_udp_packet(packet + ETHER_HDR_LEN + sizeof (struct ip_hdr));
+			break ;
+
+		default :
+			printf(" --- Layer 4 protocol not supported: %u ---\n", ip_type);
+			break ;
+	}
+
 //	tcp_header_length = decode_tcp_packet(packet + ETHER_HDR_LEN + sizeof(struct ip_hdr));
 
 //	total_header_size = ETHER_HDR_LEN + sizeof(struct ip_hdr) + tcp_header_length;
@@ -97,6 +136,6 @@ int main(void)
 	if (pcap_handle == NULL)
 		pcap_fatal("pcap_open_live", errbuff);
 
-	pcap_loop(pcap_handle, 3, caught_packet, NULL);
+	pcap_loop(pcap_handle, 6, caught_packet, NULL);
 	pcap_close(pcap_handle);
 }

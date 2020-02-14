@@ -30,7 +30,11 @@ struct				ether_hdr
 	unsigned char	ether_dest_addr[ETHER_ADDR_LEN];
 	unsigned char	ether_src_addr[ETHER_ADDR_LEN];
 	unsigned short	ether_type;
-}
+};
+
+#define ICMP_CODE	1
+#define TCP_CODE	6
+#define UDP_CODE	17
 
 struct				ip_hdr
 {
@@ -44,7 +48,16 @@ struct				ip_hdr
 	unsigned short	ip_checksum;
 	unsigned int	ip_src_addr;
 	unsigned int	ip_dst_addr;
-}
+};
+
+struct				icmp_hdr
+{
+	unsigned char	icmp_type;
+	unsigned char	icmp_code;
+	unsigned short	icmp_checksum;
+	unsigned short	icmp_id;
+	unsigned short	icmp_sequence;
+};
 
 struct				tcp_hdr
 {
@@ -65,6 +78,6 @@ struct				tcp_hdr
 	unsigned short	tcp_window;
 	unsigned short	tcp_checksum;
 	unsigned short	tcp_urgent;
-}
+};
 
 #endif
